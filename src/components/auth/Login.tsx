@@ -1,13 +1,17 @@
 import { Box, Container, Paper, Stack, styled, FormControl, FormLabel, FormHelperText, Button } from '@mui/material';
 import { Input, inputClasses } from '@mui/base/Input';
 import logo from '../../assets/images/FASTFODD.png';
-import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { LoginType } from '../../lib/type';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import axios from 'axios';
 // import { sleep } from 'react-query/types/core/utils';
+import InputControl from '../Form/Input/InputControl';
+import { request } from '../../lib/request';
+import { useAtom, useSetAtom } from 'jotai';
+import { idUser, tokenAtom, userAtom } from '../../lib/atom/authAtom';
+import { useNavigate } from 'react-router-dom';
 
 const validateLogin = yup
     // Tạo  object validate cùng với message của nó
@@ -32,55 +36,30 @@ const Login: React.FC = () => {
         resolver: yupResolver(validateLogin),
     });
 
+    const [user, setUser] = useAtom(userAtom);
+    const setToken = useSetAtom(tokenAtom);
+    const setIdUser = useSetAtom(idUser);
+    const navigate = useNavigate();
+
     const onSubmit: SubmitHandler<LoginType> = async (values) => {
         console.log('values', values);
-        console.log(isSubmitting);
 
-        const request = await axios.post('https://localhost:8080/login', {
-            values,
-        });
-        console.log('request_2', request);
+        const response = await request.post('auth/login', values);
+        if (response.data) {
+            console.log('response', response.data.data.user);
+            setUser(response.data.data.user);
+            setIdUser(response.data.data.user.id);
+            setToken(response.data.data.accessToken);
+            navigate('/');
+        }
     };
     return (
         <Container sx={{ ...styleContainer }}>
             <LoginPaper>
                 <Box sx={{ ...styleFormLogin }} component="form" onSubmit={handleSubmit(onSubmit)}>
                     <img style={{ width: '60px', borderRadius: '8px', height: '60px' }} src={logo} />
-
-                    {/* Sử dụng Controller cho các trường dữ liệu */}
-                    <FormControl required>
-                        <Controller
-                            name="email"
-                            control={control}
-                            render={({ field, fieldState }) => (
-                                <>
-                                    <FormLabel sx={fieldState.error ? { color: '#D32F2F' } : {}}>Email</FormLabel>
-                                    <StyledInput {...field} placeholder="Email" />
-                                    {fieldState.error && (
-                                        <FormHelperText error>{fieldState.error.message}</FormHelperText>
-                                    )}
-                                </>
-                            )}
-                        />
-                    </FormControl>
-
-                    <FormControl required>
-                        {/* Kiểm soát name và control -> render view */}
-                        <Controller
-                            name="password"
-                            control={control}
-                            render={({ field, fieldState }) => (
-                                <>
-                                    <FormLabel sx={fieldState.error ? { color: '#D32F2F' } : {}}>Password</FormLabel>
-                                    <StyledInput {...field} placeholder="Password" type="password" />
-                                    {fieldState.error && (
-                                        <FormHelperText error>{fieldState.error.message}</FormHelperText>
-                                    )}
-                                </>
-                            )}
-                        />
-                    </FormControl>
-
+                    <InputControl required control={control} name="email" label="Email" placeholder="Email...." />
+                    <InputControl required control={control} name="password" type="password" label="Password" placeholder="Password...." />
                     <LoadingButton
                         loading={isSubmitting}
                         type="submit"
